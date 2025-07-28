@@ -2,11 +2,12 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { TrendingUp, TrendingDown, Activity } from "lucide-react"
 import { LineChart, Line, ResponsiveContainer } from "recharts"
+import { useState, useEffect } from "react"
 
 // Mock market data - in a real app, this would come from an API
-const marketData = [
+const initialMarketData = [
   {
     symbol: "SPX500",
     name: "S&P 500",
@@ -70,14 +71,47 @@ const marketData = [
 ]
 
 export function MarketDataCards() {
+  const [marketData, setMarketData] = useState(initialMarketData)
+
+  // Simulate real-time price updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMarketData(prev => prev.map(asset => {
+        const change = (Math.random() - 0.5) * 0.02 // Small random change
+        const newPrice = parseFloat(asset.price) * (1 + change)
+        const priceChange = newPrice - parseFloat(asset.price)
+        const percentChange = (priceChange / parseFloat(asset.price)) * 100
+        
+        return {
+          ...asset,
+          price: newPrice.toFixed(asset.symbol === "EURUSD" ? 5 : 2),
+          change: `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%`,
+          changeValue: `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(asset.symbol === "EURUSD" ? 5 : 2)}`,
+          isPositive: percentChange >= 0,
+          chartData: asset.chartData.slice(1).concat([{ 
+            value: newPrice 
+          }])
+        }
+      }))
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in-0 duration-500">
       {marketData.map((asset) => (
-        <Card key={asset.symbol} className="transition-all hover:shadow-lg cursor-pointer">
+        <Card 
+          key={asset.symbol} 
+          className="transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer group"
+        >
           <CardContent className="p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="font-bold text-lg">{asset.symbol}</h3>
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  {asset.symbol}
+                  <Activity className="w-3 h-3 text-green-500 animate-pulse" />
+                </h3>
                 <p className="text-xs text-muted-foreground">{asset.name}</p>
               </div>
               <Badge
@@ -92,12 +126,14 @@ export function MarketDataCards() {
             </div>
 
             <div className="space-y-1 mb-3">
-              <p className="font-bold text-xl">{asset.price}</p>
+              <p className="font-bold text-xl transition-all duration-500 group-hover:text-blue-600">
+                {asset.price}
+              </p>
               <div className="flex items-center space-x-1">
                 {asset.isPositive ? (
-                  <TrendingUp className="w-3 h-3 text-green-600" />
+                  <TrendingUp className="w-3 h-3 text-green-600 animate-bounce" />
                 ) : (
-                  <TrendingDown className="w-3 h-3 text-red-600" />
+                  <TrendingDown className="w-3 h-3 text-red-600 animate-bounce" />
                 )}
                 <span className={`text-sm ${
                   asset.isPositive ? "text-green-600" : "text-red-600"
@@ -108,7 +144,7 @@ export function MarketDataCards() {
             </div>
 
             {/* Mini Chart */}
-            <div className="h-8">
+            <div className="h-8 transition-all duration-300 group-hover:h-12">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={asset.chartData}>
                   <Line
@@ -117,6 +153,7 @@ export function MarketDataCards() {
                     stroke={asset.isPositive ? "#10b981" : "#ef4444"}
                     strokeWidth={2}
                     dot={false}
+                    strokeDasharray={asset.isPositive ? "0" : "3 3"}
                   />
                 </LineChart>
               </ResponsiveContainer>
